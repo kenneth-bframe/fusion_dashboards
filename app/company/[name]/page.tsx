@@ -103,35 +103,6 @@ export default async function CompanyDashboard({ params }: { params: { name: str
               if (card.title.toLowerCase() === "location" && card.value) {
                 valueContent = card.value;
               }
-// LocationMap component for OSM static map
-function LocationMap({ address }: { address: string }) {
-  const [coords, setCoords] = React.useState<{ lat: string; lon: string } | null>(null);
-
-  React.useEffect(() => {
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.length > 0) {
-          setCoords({ lat: data[0].lat, lon: data[0].lon });
-        }
-      });
-  }, [address]);
-
-  if (!coords) {
-    return <div>Loading map...</div>;
-  }
-
-  const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${coords.lat},${coords.lon}&zoom=13&size=600x200&markers=${coords.lat},${coords.lon},red-pushpin`;
-  return (
-    <img
-      src={staticMapUrl}
-      alt="Location Map"
-      width="600"
-      height="200"
-      style={{ borderRadius: '8px', width: '100%', height: 'auto' }}
-    />
-  );
-}
               return (
                 <div key={card.title} className="bg-white rounded-lg shadow p-4 border w-full">
                   <div className="font-semibold text-gray-700 mb-2">{card.title}</div>
