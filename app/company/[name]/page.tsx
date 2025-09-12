@@ -1,0 +1,149 @@
+
+import dynamic from "next/dynamic";
+import fs from "fs";
+import path from "path";
+import matter from "gray-matter";
+import ReactMarkdown from "react-markdown";
+import Image from "next/image";
+import { notFound } from "next/navigation";
+import React from "react";
+
+export async function generateStaticParams() {
+  const companiesDir = path.join(process.cwd(), "companies");
+  const companyFiles = fs.readdirSync(companiesDir);
+  return companyFiles
+    .filter((file) => file.endsWith(".md"))
+    .map((mdFile) => ({ name: mdFile.replace(/\.md$/, "") }));
+}
+
+
+export default async function CompanyDashboard({ params }: { params: { name: string } }) {
+  const companyKey = params.name;
+  const companiesDir = path.join(process.cwd(), "companies");
+  const mdFile = path.join(companiesDir, `${companyKey}.md`);
+
+  if (!fs.existsSync(mdFile)) {
+    notFound();
+  }
+
+  const fileContent = fs.readFileSync(mdFile, "utf8");
+  const { content } = matter(fileContent);
+
+  // Extract company name from markdown (look for '### Name' section)
+  let displayName = companyKey;
+  const nameMatch = content.match(/### Name\s*([\s\S]*?)(?:###|$)/);
+  if (nameMatch && nameMatch[1]) {
+    displayName = nameMatch[1].trim().split("\n")[0];
+  }
+
+  // Logo should be in public/companies
+  const logoFile = [".png", ".jpg"].map(ext => `${companyKey.toLowerCase().replace(/ /g, "_")}${ext}`)
+    .find(filename => fs.existsSync(path.join(process.cwd(), "public/companies", filename)));
+
+  // Custom renderer for markdown images to use /companies/ path
+  const components = {
+    img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
+      const { src, alt } = props;
+      if (!src || typeof src !== "string") return null;
+      const imgSrc = src.startsWith("http") ? src : `/companies/${src}`;
+      return (
+        <Image src={imgSrc} alt={alt || "Company logo"} width={160} height={160} className="mb-6 object-contain" />
+      );
+    },
+  };
+
+  // Parse markdown sections into cards
+  const sectionRegex = /### ([^\n]+)\n([\s\S]*?)(?=###|$)/g;
+  const cards: { title: string; value: string }[] = [];
+  let match;
+  while ((match = sectionRegex.exec(content)) !== null) {
+    const title = match[1].trim();
+    const value = match[2].trim();
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle !== "name" && lowerTitle !== "logo" && lowerTitle !== "tags") {
+      cards.push({ title, value });
+    }
+  }
+
+  return (
+  <div className="max-w-6xl mx-auto p-4 sm:p-8">
+      <h1 className="text-3xl font-bold mb-4">{displayName}</h1>
+      {logoFile && (
+        <Image
+          src={`/companies/${logoFile}`}
+          alt={`${displayName} logo`}
+          width={160}
+          height={160}
+          className="mb-6 object-contain"
+        />
+      )}
+      <div className="mb-8 flex flex-col gap-4">
+        {cards.map((card) => {
+          if (card.title.toLowerCase() === "overview" || card.title.toLowerCase() === "description") {
+            return (
+              <div key={card.title} className="bg-white rounded-lg shadow p-4 border w-full">
+                <div className="font-semibold text-gray-700 mb-2">{card.title}</div>
+                <div className="text-gray-900 break-words">{card.value}</div>
+              </div>
+            );
+          }
+          return null;
+        })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
+          {cards.map((card) => {
+            if (card.title.toLowerCase() !== "overview" && card.title.toLowerCase() !== "description") {
+              let valueContent: React.ReactNode = card.value;
+              if (card.title.toLowerCase() === "website" && /^https?:\/\//.test(card.value)) {
+                valueContent = (
+                  <a href={card.value} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">
+                    {card.value}
+                  </a>
+                );
+              }
+              if (card.title.toLowerCase() === "location" && card.value) {
+                valueContent = card.value;
+              }
+// LocationMap component for OSM static map
+function LocationMap({ address }: { address: string }) {
+  const [coords, setCoords] = React.useState<{ lat: string; lon: string } | null>(null);
+
+  React.useEffect(() => {
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          setCoords({ lat: data[0].lat, lon: data[0].lon });
+        }
+      });
+  }, [address]);
+
+  if (!coords) {
+    return <div>Loading map...</div>;
+  }
+
+  const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${coords.lat},${coords.lon}&zoom=13&size=600x200&markers=${coords.lat},${coords.lon},red-pushpin`;
+  return (
+    <img
+      src={staticMapUrl}
+      alt="Location Map"
+      width="600"
+      height="200"
+      style={{ borderRadius: '8px', width: '100%', height: 'auto' }}
+    />
+  );
+}
+              return (
+                <div key={card.title} className="bg-white rounded-lg shadow p-4 border w-full">
+                  <div className="font-semibold text-gray-700 mb-2">{card.title}</div>
+                  <div className="text-gray-900 break-words">{valueContent}</div>
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      </div>
+      {/* Dashboard charts can be added here using recharts */}
+    </div>
+  );
+}
