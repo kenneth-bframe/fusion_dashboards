@@ -25,8 +25,6 @@ async function getCompanies() {
     });
 }
 
-
-
 export default async function Home() {
   const companies = await getCompanies();
   return (
