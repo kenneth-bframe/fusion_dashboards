@@ -1,10 +1,9 @@
 
-import dynamic from "next/dynamic";
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
-import ReactMarkdown from "react-markdown";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import React from "react";
 
@@ -40,17 +39,6 @@ export default async function CompanyDashboard({ params }: { params: { name: str
   const logoFile = [".png", ".jpg"].map(ext => `${companyKey.toLowerCase().replace(/ /g, "_")}${ext}`)
     .find(filename => fs.existsSync(path.join(process.cwd(), "public/companies", filename)));
 
-  // Custom renderer for markdown images to use /companies/ path
-  const components = {
-    img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
-      const { src, alt } = props;
-      if (!src || typeof src !== "string") return null;
-      const imgSrc = src.startsWith("http") ? src : `/companies/${src}`;
-      return (
-        <Image src={imgSrc} alt={alt || "Company logo"} width={160} height={160} className="mb-6 object-contain" />
-      );
-    },
-  };
 
   // Parse markdown sections into cards
   const sectionRegex = /### ([^\n]+)\n([\s\S]*?)(?=###|$)/g;
@@ -74,7 +62,7 @@ export default async function CompanyDashboard({ params }: { params: { name: str
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8">
-      <a href="/" className="inline-block mb-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Home</a>
+  <Link href="/" className="inline-block mb-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Home</Link>
       <h1 className="text-3xl font-bold mb-4">{displayName}</h1>
       {logoFile && (
         <Image
